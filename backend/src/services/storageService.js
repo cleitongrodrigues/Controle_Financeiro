@@ -8,7 +8,7 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.MINIO_SECRET_KEY || 'minioadmin123',
   },
   endpoint: process.env.MINIO_ENDPOINT || 'http://minio:9000',
-  forcePathStyle: true, // Necessário para o MinIO
+  forcePathStyle: true,
 });
 
 const s3PresignClient = new S3Client({
@@ -17,30 +17,50 @@ const s3PresignClient = new S3Client({
     accessKeyId: process.env.MINIO_ACCESS_KEY || 'minioadmin',
     secretAccessKey: process.env.MINIO_SECRET_KEY || 'minioadmin123',
   },
-  endpoint: 'http://localhost:9000', // A URL externa que o navegador vai enxergar
+  endpoint: process.env.MINIO_PUBLIC_URL || 'http://localhost:9000',
   forcePathStyle: true,
 });
 
-const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'cine-magico-profiles';
+const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'conta-comigo-comprovantes';
 
 class StorageService {
   async initBucket() {
     try {
       await s3Client.send(new HeadBucketCommand({ Bucket: BUCKET_NAME }));
     } catch (error) {
-      if (error.name === 'NotFound') {
+      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
         console.log(`Bucket ${BUCKET_NAME} não encontrado. Criando...`);
-        await s3Client.send(new CreateBucketCommand({ Bucket: BUCKET_NAME }));
-        console.log(`Bucket ${BUCKET_NAME} criado com sucesso.`);
+        try {
+          await s3Client.send(new CreateBucketCommand({ Bucket: BUCKET_NAME }));
+          console.log(`✓ Bucket ${BUCKET_NAME} criado com sucesso.`);
+        } catch (createErr) {
+          console.warn('Aviso ao criar bucket MinIO:', createErr.message);
+        }
       } else {
-        console.error('Erro ao verificar bucket no MinIO:', error);
+        console.warn('Aviso ao verificar bucket MinIO:', error.message);
       }
     }
   }
 
-  async uploadFile(fileBuffer, mimetype, originalName, userId) {
-    const extension = originalName.split('.').pop();
-    const fileName = `users/${userId}/profile-${Date.now()}.${extension}`;
+  async uploadComprovante(fileBuffer, mimetype, originalName, userId) {
+    const extension = originalName ? originalName.split('.').pop() : 'png';
+    const fileName = `comprovantes/${userId}/comp-${Date.now()}-${Math.floor(Math.random() * 1000)}.${extension}`;
+
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: fileName,
+        Body: fileBuffer,
+        ContentType: mimetype,
+      })
+    );
+
+    return fileName;
+  }
+
+  async uploadFotoPerfil(fileBuffer, mimetype, originalName, userId) {
+    const extension = originalName ? originalName.split('.').pop() : 'jpg';
+    const fileName = `perfis/${userId}/foto-${Date.now()}.${extension}`;
 
     await s3Client.send(
       new PutObjectCommand({
@@ -57,17 +77,29 @@ class StorageService {
   async getFileUrl(fileName) {
     if (!fileName) return null;
 
+    try {
+      const command = new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: fileName,
+      });
+
+      return await getSignedUrl(s3PresignClient, command, { expiresIn: 7200 }); // 2 horas
+    } catch (error) {
+      console.error('Erro ao gerar URL presign MinIO:', error.message);
+      return null;
+    }
+  }
+
+  async getFileStream(fileName) {
     const command = new GetObjectCommand({
       Bucket: BUCKET_NAME,
       Key: fileName,
     });
-
-    // Gera uma URL temporária válida por 1 hora usando o client de presign (com localhost)
-    return await getSignedUrl(s3PresignClient, command, { expiresIn: 3600 });
+    return await s3Client.send(command);
   }
 }
 
 const storageService = new StorageService();
-storageService.initBucket(); // Inicializa o bucket ao iniciar o servidor
+storageService.initBucket();
 
 module.exports = storageService;

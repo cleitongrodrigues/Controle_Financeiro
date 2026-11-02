@@ -6,6 +6,7 @@ const Profile = ({ user, token }) => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bioInput, setBioInput] = useState('');
+  const [nomeInput, setNomeInput] = useState('');
   const [fileInput, setFileInput] = useState(null);
   const [uploading, setUploading] = useState(false);
   const navigate = useNavigate();
@@ -16,13 +17,14 @@ const Profile = ({ user, token }) => {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/profile', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch('/api/profile', {
+        headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
         setProfileData(data);
         setBioInput(data.bio || '');
+        setNomeInput(data.nome || '');
       } else {
         console.error('Falha ao buscar perfil');
       }
@@ -36,25 +38,26 @@ const Profile = ({ user, token }) => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     setUploading(true);
-    
+
     const formData = new FormData();
+    formData.append('nome', nomeInput);
     formData.append('bio', bioInput);
     if (fileInput) {
       formData.append('foto', fileInput);
     }
 
     try {
-      const res = await fetch('http://localhost:3000/api/profile', {
+      const res = await fetch('/api/profile', {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`
         },
         body: formData
       });
 
       if (res.ok) {
         alert('Perfil atualizado com sucesso!');
-        fetchProfile(); // Recarrega os dados para mostrar a nova foto
+        fetchProfile();
         setFileInput(null);
       } else {
         const err = await res.json();
@@ -74,8 +77,10 @@ const Profile = ({ user, token }) => {
   return (
     <div className="profile-container">
       <div className="profile-header">
-        <button className="back-button" onClick={() => navigate('/')}>← Voltar pro Catálogo</button>
-        <h2>Meu Perfil</h2>
+        <button className="back-button" onClick={() => navigate('/')}>
+          ← Voltar ao Painel
+        </button>
+        <h2>Meu Perfil & Finanças</h2>
       </div>
 
       <div className="profile-content">
@@ -85,60 +90,89 @@ const Profile = ({ user, token }) => {
               {profileData.foto_url ? (
                 <img src={profileData.foto_url} alt="Foto de perfil" />
               ) : (
-                <div className="avatar-placeholder">{profileData.nome.charAt(0).toUpperCase()}</div>
+                <div className="avatar-placeholder">
+                  {profileData.nome.charAt(0).toUpperCase()}
+                </div>
               )}
             </div>
+            <div className="role-tag-container">
+              <span className={`role-badge ${profileData.role}`}>
+                Papel: {profileData.role?.toUpperCase()}
+              </span>
+            </div>
           </div>
-          
+
           <form onSubmit={handleUpdate} className="profile-form">
             <div className="form-group">
-              <label>Nome:</label>
-              <input type="text" value={profileData.nome} disabled />
-            </div>
-
-            <div className="form-group">
-              <label>Email:</label>
-              <input type="text" value={profileData.email} disabled />
-            </div>
-
-            <div className="form-group">
-              <label>Biografia:</label>
-              <textarea 
-                value={bioInput} 
-                onChange={(e) => setBioInput(e.target.value)}
-                placeholder="Conte um pouco sobre os filmes que você gosta..."
-                rows="4"
+              <label>Nome Completo:</label>
+              <input
+                type="text"
+                value={nomeInput}
+                onChange={(e) => setNomeInput(e.target.value)}
+                required
               />
             </div>
 
             <div className="form-group">
-              <label>Nova foto de perfil:</label>
-              <input 
-                type="file" 
+              <label>E-mail:</label>
+              <input type="email" value={profileData.email} disabled />
+            </div>
+
+            <div className="form-group">
+              <label>Papel no Sistema (RBAC):</label>
+              <input type="text" value={profileData.role} disabled />
+              <small className="help-text">
+                Definido pela arquitetura de permissões: <code>titular</code>, <code>membro</code> ou <code>admin</code>.
+              </small>
+            </div>
+
+            <div className="form-group">
+              <label>Bio / Apresentação:</label>
+              <textarea
+                value={bioInput}
+                onChange={(e) => setBioInput(e.target.value)}
+                placeholder="Ex: Gestor financeiro da família, focado em economizar..."
+                rows="3"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Foto de Perfil (Salva no MinIO):</label>
+              <input
+                type="file"
                 accept="image/*"
                 onChange={(e) => setFileInput(e.target.files[0])}
               />
             </div>
 
-            <button type="submit" className="save-button" disabled={uploading}>
-              {uploading ? 'Salvando...' : 'Salvar Alterações'}
+            <button type="submit" disabled={uploading} className="save-button">
+              {uploading ? 'Salvando no MinIO...' : 'Salvar Alterações'}
             </button>
           </form>
         </div>
 
-        <div className="favorites-list">
-          <h3>Meus Filmes Favoritos ({profileData.favoritos?.length || 0})</h3>
-          {profileData.favoritos && profileData.favoritos.length > 0 ? (
-            <div className="movies-grid">
-              {profileData.favoritos.map(fav => (
-                <div key={fav.id} className="fav-card">
-                  🍿 Filme ID: {fav.movie_id} adicionado em {new Date(fav.criado_em).toLocaleDateString()}
+        <div className="profile-accounts-section">
+          <h3>Minhas Contas e Carteiras Vinculadas ({profileData.contas?.length || 0})</h3>
+          <div className="accounts-grid">
+            {profileData.contas && profileData.contas.length > 0 ? (
+              profileData.contas.map((acc) => (
+                <div key={acc.id} className="account-card-mini">
+                  <div className="acc-mini-header">
+                    <strong>{acc.nome}</strong>
+                    <span className={`badge-mini ${acc.tipo}`}>{acc.tipo}</span>
+                  </div>
+                  <div className="acc-mini-role">
+                    Seu papel: <strong>{acc.papel}</strong>
+                  </div>
+                  <div className="acc-mini-date">
+                    Membro desde {new Date(acc.membro_desde).toLocaleDateString('pt-BR')}
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="no-favorites">Você ainda não curtiu nenhum filme.</p>
-          )}
+              ))
+            ) : (
+              <p className="no-accounts">Nenhuma conta cadastrada ainda.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ services:
   auth-service:
     build:
       context: ./auth-service
-    container_name: cine-magico-auth-service
+    container_name: conta-comigo-auth-service
     environment:
       AUTH_SERVICE_PORT: ${AUTH_SERVICE_PORT}
       JWT_SECRET: ${JWT_SECRET}
@@ -25,12 +25,12 @@ services:
       start_period: 20s
     restart: unless-stopped
     networks:
-      - cine-network
+      - conta-comigo-network
 
   backend:
     build:
       context: ./backend
-    container_name: cine-magico-backend
+    container_name: conta-comigo-backend
     ports:
       - "3000:3000"
     environment:
@@ -43,8 +43,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
       DB_DIALECT: ${DB_DIALECT}
-      TMDB_API_KEY: ${TMDB_API_KEY}
-      TMDB_BASE_URL: ${TMDB_BASE_URL}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      LOG_SERVICE_URL: http://log-service:3002
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
       interval: 10s
@@ -56,12 +59,12 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - cine-network
+      - conta-comigo-network
 
   frontend:
     build:
       context: ./frontend
-    container_name: cine-magico-frontend
+    container_name: conta-comigo-frontend
     ports:
       - "8201:80"
     depends_on:
@@ -69,11 +72,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - cine-network
+      - conta-comigo-network
 
   redis:
     image: redis:7-alpine
-    container_name: cine-magico-redis
+    container_name: conta-comigo-redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -81,12 +84,12 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - cine-network
+      - conta-comigo-network
 
   log-service:
     build:
       context: ./log-service
-    container_name: cine-magico-log-service
+    container_name: conta-comigo-log-service
     environment:
       LOG_SERVICE_PORT: 3002
       REDIS_HOST: redis
@@ -102,11 +105,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - cine-network
+      - conta-comigo-network
 
   minio:
     image: elestio/minio:latest
-    container_name: cine-magico-minio
+    container_name: conta-comigo-minio
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
@@ -121,8 +124,8 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - cine-network
+      - conta-comigo-network
 
 networks:
-  cine-network:
+  conta-comigo-network:
     driver: bridge

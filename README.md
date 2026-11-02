@@ -4,10 +4,62 @@
 
 ---
 
-## Desenvolvido por
-- **Autor:** [@cleitongrodrigues](https://github.com/cleitongrodrigues)
+## 🌐 Acesso em Produção
+
+- **URL do Sistema no ar:** [https://cleiton-souza-isw055.lapps.studio](https://cleiton-souza-isw055.lapps.studio)
 - **Repositório:** [github.com/cleitongrodrigues/Controle_Financeiro](https://github.com/cleitongrodrigues/Controle_Financeiro)
+- **Autor:** [@cleitongrodrigues](https://github.com/cleitongrodrigues)
 - **Professor / Disciplina:** [github.com/siriani](https://github.com/siriani) — *ISW055 · Introdução à Computação em Nuvem*
+
+---
+
+### ⚡ Credenciais de Teste Rápido (Senha para todos: `123456`)
+
+| Usuário | E-mail | Papel (RBAC) | Permissões no Sistema |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | `admin@contacomigo.com` | `admin` | Acesso completo à auditoria e logs no Redis Streams (`/api/logs`). |
+| **Mariana Lopes** | `titular@contacomigo.com` | `titular` | Gestora da conta familiar "Casa Mariana & Lucas": cria despesas, gera convites e gerencia a conta. |
+| **Lucas Lopes** | `membro@contacomigo.com` | `membro` | Afiliado convidado: lança despesas e vê saldo conjunto. **Bloqueado (403)** ao tentar excluir conta ou ver logs. |
+
+---
+
+## 🏗️ Diagrama de Arquitetura
+
+O sistema opera sobre uma arquitetura de microsserviços conteinerizada via Docker Compose, com banco relacional MySQL, mensageria Redis Streams e Object Storage MinIO:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                 Navegador (Web & Mobile)                    │
+│   Landing Page Pública / Dashboard Financeiro Responsivo    │
+└─────────────────────────────────────────────────────────────┘
+                               ↓ HTTPS (porta 8201)
+┌─────────────────────────────────────────────────────────────┐
+│                 Frontend (React + Vite)                     │
+│               Proxy reverso Nginx / Static                  │
+└─────────────────────────────────────────────────────────────┘
+                               ↓ HTTP
+┌──────────────────────────────────────────────┐          ┌─────────────────────────┐
+│         Backend Principal (porta 3000)       │ ───────> │  Log Service (porta 3002)│
+│  ├─ CRUD de Contas e Transações              │          │  (Apenas interno Docker)│
+│  ├─ Multi-Tenancy & Isolamento Seguro        │          │  ├─ Recebe eventos      │
+│  ├─ Validação de RBAC (titular/membro/admin) │ <─────── │  └─ Retorna logs (Admin)│
+│  └─ Anexo de Comprovantes                    │          └─────────────────────────┘
+└──────────────────────────────────────────────┘                        ↓ XADD
+         ↓                         ↓                       ┌─────────────────────────┐
+┌──────────────────┐      ┌──────────────────┐             │  Redis 7 (porta 6379)   │
+│   Auth Service   │      │      MinIO       │             │  └─ Redis Streams       │
+│   (porta 3001)   │      │   (porta 9000)   │             └─────────────────────────┘
+│  ├─ Login / JWT  │      │  Object Storage  │
+│  └─ RBAC & Hash  │      │  ├─ Comprovantes │
+└──────────────────┘      │  └─ Fotos Perfil │
+         ↓                └──────────────────┘
+┌──────────────────────────────────────────────┐
+│             Banco MySQL (porta 3306)         │
+│  ├─ usuarios, reset_tokens                   │
+│  ├─ contas, membros_conta                    │
+│  └─ categorias, transacoes                   │
+└──────────────────────────────────────────────┘
+```
 
 ---
 
@@ -21,7 +73,7 @@
 - **Quando:** Todos os meses, no momento em que chegam as contas de consumo (aluguel, condomínio, luz, internet, compras de supermercado e farmácia) e no fechamento das faturas de cartão.
 - **Quanto custa hoje:**
   - **Dinheiro:** Perda média de **R$ 150 a R$ 400 mensais** por despesas duplicadas, esquecimento de datas de vencimento com incidência de multas/juros e falta de previsibilidade do saldo familiar.
-  - **Tempo:** Mais de **4 a 6 horas por mês** gastas somando extratos bancários de bancos diferentes, procurando comprovantes soltos em conversas de WhatsApp e tentando preencher planilhas.
+  - **Tempo:** Mais de **4 a 6 horas por mês** gastas somando extratos bancários de bancos diferentes, procurando comprovantes soltos em conversas de WhatsApp e preenchendo planilhas.
   - **Risco emocional e atrito:** Discussões frequentes entre parceiros ou familiares por falta de transparência sobre "quem gastou mais", quem pagou a última compra de supermercado ou quanto cada um realmente deve.
 - **Como resolvem hoje:** 
   - Grupos de WhatsApp ("Contas de Casa") com prints de PIX e fotos de notas que se perdem no histórico.
@@ -34,7 +86,7 @@
 - **Nome:** Mariana Lopes
 - **Idade:** 32 anos
 - **Ocupação:** Analista de Recursos Humanos
-- **Contexto:** Casada com Lucas há 3 anos, mora com o marido e um filho de 4 anos. Ambos trabalham e possuem contas bancárias separadas (Nubank e Itaú), mas dividem todas as despesas da casa e da criança.
+- **Contexto:** Casada com Lucas há 3 anos, mora com o marido e um filho de 4 anos. Ambos trabalham e possuem contas bancárias separadas, mas dividem todas as despesas da casa e da criança.
 - **Rotina:** Dia a dia corrido, alternando entre trabalho em home-office híbrido, escola da criança e tarefas do lar. Realiza a maior parte dos pagamentos via PIX ou cartão de crédito pelo celular.
 - **O que tenta fazer:** Ter uma visão unificada e em tempo real do custo mensal da residência, saber exatamente quanto cada um contribuiu até o momento e guardar uma reserva previsível para a viagem de férias da família.
 - **O que atrapalha:** O marido frequentemente esquece de lançar compras de conveniência ou farmácia; os comprovantes fiscais em papel somem; as planilhas são péssimas para usar pelo smartphone na rua; no final do mês, calcular o acerto de contas vira um motivo de estresse e cobrança entre o casal.
@@ -78,11 +130,11 @@ O **Conta Comigo** opera sob modelo SaaS freemium via assinatura recorrente proc
 ---
 
 ## 7. Métricas de Sucesso
-- **Cadastros Ativos (Onboarding):** Número de usuários que criam a conta e registram ao menos 5 transações nos primeiros 7 dias.
+- **Cadastros Ativos (Onboarding):** Usuários que criam a conta e registram ao menos 5 transações nos primeiros 7 dias.
 - **Taxa de Convites Aceitos:** Proporção de links de convite gerados que resultam em novos membros cadastrados e ativos no mesmo grupo.
 - **MRR (Monthly Recurring Revenue):** Meta de atingir **R$ 3.500,00 a R$ 5.000,00 em MRR** nos primeiros 6 meses de tração.
-- **Taxa de Conversão Free → Pro:** Converter entre **5% a 8%** da base ativa para o plano Pro, impulsionada pelo limite de membros e necessidade de histórico contínuo.
-- **Retenção e Churn Rate:** Manter o Churn mensal abaixo de **4%**, com alto engajamento no fechamento e na virada de cada mês.
+- **Taxa de Conversão Free → Pro:** Converter entre **5% a 8%** da base ativa para o plano Pro.
+- **Retenção e Churn Rate:** Manter o Churn mensal abaixo de **4%**, com engajamento constante na conciliação mensal.
 
 ---
 
@@ -104,45 +156,43 @@ O **Conta Comigo** opera sob modelo SaaS freemium via assinatura recorrente proc
 
 ## 9. Mapa de Reaproveitamento da Arquitetura
 
-Toda a arquitetura robusta de microsserviços desenvolvida até aqui é 100% reaproveitada para sustentar o **Conta Comigo**:
-
 | Peça do Projeto Anterior | O que vira no Conta Comigo | Implementação Técnica |
 | :--- | :--- | :--- |
 | **Catálogo de Filmes (TMDB API)** | **Módulo Financeiro Central** | CRUD completo de transações (receitas, despesas, transferências), categorias financeiras (Moradia, Alimentação, Transporte, Lazer) e cálculo de saldos consolidados. |
 | **Auth-Service + RBAC** | **Gestão de Acesso e Afiliados** | Papel de `Titular / Administrador` (gerencia conta, convida afiliados, altera tetos de gastos e assina o Pro) e `Membro / Afiliado` (lança despesas, visualiza saldo compartilhado e anexa comprovantes). Autenticação JWT e fluxo seguro de esqueci minha senha via e-mail. |
 | **Upload e Perfil (MinIO / S3)** | **Comprovantes e Recibos Fiscais** | Upload de fotos de notas fiscais, cupons de supermercado, recibos e comprovantes de PIX atrelados diretamente a cada transação financeira, além da foto de perfil dos membros. |
-| **Log-Service (Redis Streams)** | **Trilha de Auditoria Financeira** | Registro em tempo real de eventos críticos do negócio: *"Transação criada por Lucas (R$ 120)"*, *"Comprovante anexado por Mariana"*, *"Novo membro aceitou convite"*, garantindo total transparência e confiabilidade. |
+| **Log-Service (Redis Streams)** | **Trilha de Auditoria Financeira** | Registro em tempo real de eventos críticos do negócio: *"transacao_criada"*, *"transacao_editada"*, *"comprovante_anexado"*, *"entrou_na_conta"*, garantindo total transparência e confiabilidade. |
 | **Plano Premium (Stripe)** | **Monetização e Cobrança do SaaS** | Checkout Stripe para contratação da assinatura Pro Família, gerenciamento de ciclo de vida da assinatura via Webhooks e desbloqueio de recursos avançados. |
-| **Frontend (React + Vite)** | **Interface Responsiva (Web & Mobile)** | Dashboard financeiro moderno, visualização de extrato, modal de lançamento rápido de despesa com envio de foto e gráficos de despesas por categoria e por pessoa. |
-| **Docker Compose & Portainer** | **Orquestração de Microsserviços** | A mesma infraestrutura com isolamento de rede, containers dedicados para frontend, backend, auth-service, log-service, redis, minio e mariadb. |
+| **Frontend (React + Vite)** | **Interface Responsiva (Web & Mobile)** | Landing Page pública aberta, Dashboard financeiro moderno, visualização de extrato, modal de lançamento rápido de despesa com envio de foto e gráficos de despesas por categoria e por pessoa. |
+| **Docker Compose & Portainer** | **Orquestração de Microsserviços** | A mesma infraestrutura com isolamento de rede, containers dedicados para frontend, backend, auth-service, log-service, redis, minio e MySQL. |
 
 ---
 
-## 10. Backlog de Desenvolvimento (Próximas Entregas)
+## 10. Scripts de Banco de Dados (MySQL)
 
-As próximas entregas do projeto estão organizadas no roadmap abaixo (Issues do GitHub):
-
-1. **Issue #1 - Modelagem de Dados Financeiros e Migrations:**
-   - Criar tabelas de `contas`, `membros_conta`, `categorias`, `transacoes` e `anexos_comprovantes`.
-2. **Issue #2 - Módulo de Transações e Balanço Financeiro:**
-   - Implementar endpoints no backend para criar, listar, editar e categorizar despesas/receitas, além de rota para cálculo do balanço compartilhado da conta.
-3. **Issue #3 - Sistema de Convites para Membros (Afiliados):**
-   - Criação de tokens únicos de convite gerados pelo titular para entrada de familiares/cônjuges na conta compartilhada com controle RBAC.
-4. **Issue #4 - Anexo de Comprovantes Integrado ao MinIO:**
-   - Rota de upload de arquivos (imagens/PDFs) no serviço de armazenamento MinIO e relacionamento do anexo à despesa correspondente.
-5. **Issue #5 - Assinatura Pro com Stripe Checkout e Webhooks:**
-   - Implementação do fluxo de checkout do Stripe, tratamento de eventos de assinatura paga/cancelada e controle de restrições (limite de membros e comprovantes do plano Free).
+Os scripts de criação e semeadura do banco de dados estão versionados no repositório:
+- **Migração das Tabelas do Domínio:** [`migrations/003-dominio-conta-comigo.sql`](file:///c:/Users/Cleiton/Documents/GitHub/Controle_Financeiro/migrations/003-dominio-conta-comigo.sql)
+- **Seed de Dados Demonstrativos:** [`migrations/004-seed-dados.sql`](file:///c:/Users/Cleiton/Documents/GitHub/Controle_Financeiro/migrations/004-seed-dados.sql)
 
 ---
 
-## Stack Tecnológica
+## 11. Como Executar Localmente ou no Portainer
 
-- **Frontend:** React, Vite, Tailwind CSS / Vanilla CSS responsivo
-- **Backend Principal:** Node.js, Express, Sequelize/MySQL
-- **Serviço de Autenticação (Auth-Service):** Node.js, Express, JWT, Bcrypt, Nodemailer (Mailtrap/Brevo)
-- **Serviço de Auditoria (Log-Service):** Node.js, Redis Streams
-- **Armazenamento de Objetos (Storage):** MinIO (S3-compatible)
-- **Banco de Dados:** MariaDB / MySQL
-- **Mensageria e Cache:** Redis 7
-- **Pagamentos e Assinaturas:** Stripe API
-- **Containerização:** Docker e Docker Compose
+### Execução Local com Docker Compose:
+```bash
+# 1. Clone o repositório
+git clone https://github.com/cleitongrodrigues/Controle_Financeiro.git
+cd Controle_Financeiro
+
+# 2. Configure o arquivo de ambiente
+cp .env.example .env
+
+# 3. Suba os containers
+docker compose up -d --build
+```
+
+Os serviços ficarão disponíveis em:
+- **Frontend Web:** `http://localhost:8201`
+- **Backend API:** `http://localhost:3000`
+- **MinIO Console:** `http://localhost:9001` (user: `minioadmin`, pass: `minioadmin123`)
+- **MinIO S3 Endpoint:** `http://localhost:9000`

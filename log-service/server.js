@@ -9,7 +9,7 @@ app.use(express.json());
 
 const REDIS_HOST = process.env.REDIS_HOST || 'redis';
 const REDIS_PORT = process.env.REDIS_PORT || 6379;
-const STREAM_KEY = 'cine_magico_audit_logs';
+const STREAM_KEY = 'conta_comigo_audit_logs';
 
 const redisClient = createClient({
   url: `redis://${REDIS_HOST}:${REDIS_PORT}`

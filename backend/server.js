@@ -6,55 +6,83 @@ const path = require('path');
 
 const db = require('./src/config/database');
 const authController = require('./src/controllers/authController');
-const moviesController = require('./src/controllers/moviesController');
-const favoritesController = require('./src/controllers/favoritesController');
-const commentsController = require('./src/controllers/commentsController');
+const accountsController = require('./src/controllers/accountsController');
+const transactionsController = require('./src/controllers/transactionsController');
+const categoriesController = require('./src/controllers/categoriesController');
 const logController = require('./src/controllers/logController');
 const profileController = require('./src/controllers/profileController');
 const authMiddleware = require('./src/middlewares/auth');
+const storageService = require('./src/services/storageService');
 const multer = require('multer');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Configuração do Multer (mantém arquivo em memória para jogar pro S3)
+// Configuração do Multer (mantém arquivo em memória para upload no MinIO)
+// Permite imagens (PNG, JPG, WEBP) e documentos (PDF)
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limite
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limite para notas fiscais/comprovantes
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
       cb(null, true);
     } else {
-      cb(new Error('Apenas imagens são permitidas'));
+      cb(new Error('Formato inválido. Apenas imagens e PDFs são permitidos.'));
     }
   }
 });
 
+// Rotas públicas de Autenticação (proxy para o auth-service)
 app.post('/api/auth/register', authController.register);
 app.post('/api/auth/login', authController.login);
 app.post('/api/auth/forgot-password', authController.forgotPassword);
 app.post('/api/auth/reset-password', authController.resetPassword);
 app.get('/api/auth/reset/:token', authController.checkResetToken);
 
+// Visualização direta de comprovantes arquivados no MinIO
+app.get('/api/comprovantes/download', async (req, res) => {
+  try {
+    const { key } = req.query;
+    if (!key) return res.status(400).send('Chave de comprovante não informada');
+    
+    const stream = await storageService.getFileStream(key);
+    res.setHeader('Content-Type', stream.ContentType || 'application/octet-stream');
+    stream.Body.pipe(res);
+  } catch (err) {
+    console.error('Erro ao baixar comprovante:', err.message);
+    res.status(404).send('Comprovante não encontrado');
+  }
+});
+
+// Todas as rotas abaixo exigem autenticação via JWT
 app.use('/api/*', authMiddleware);
 
+// Perfil do Usuário
 app.get('/api/profile', profileController.getProfile);
 app.put('/api/profile', upload.single('foto'), profileController.updateProfile);
 
-app.get('/api/movies', moviesController.searchMovies);
-app.get('/api/movies/:id/details', moviesController.getMovieDetails);
+// Categorias Financeiras
+app.get('/api/categorias', categoriesController.listCategories);
 
-app.post('/api/favorites', favoritesController.addFavorite);
-app.get('/api/favorites', favoritesController.listFavorites);
-app.delete('/api/favorites/:id', favoritesController.removeFavorite);
+// Contas Financeiras (Pessoal e Conjunta)
+app.get('/api/contas', accountsController.listAccounts);
+app.post('/api/contas', accountsController.createAccount);
+app.post('/api/contas/entrar', accountsController.joinAccount);
+app.get('/api/contas/:id', accountsController.getAccountDetails);
+app.delete('/api/contas/:id', accountsController.deleteAccount);
 
-app.post('/api/comments', commentsController.addComment);
-app.get('/api/comments', commentsController.listComments);
-app.delete('/api/comments/:id', commentsController.removeComment);
+// Transações Financeiras (CRUD completo com suporte a anexo de comprovante)
+app.get('/api/transacoes', transactionsController.listTransactions);
+app.post('/api/transacoes', upload.single('comprovante'), transactionsController.createTransaction);
+app.get('/api/transacoes/:id', transactionsController.getTransaction);
+app.put('/api/transacoes/:id', upload.single('comprovante'), transactionsController.updateTransaction);
+app.delete('/api/transacoes/:id', transactionsController.deleteTransaction);
 
+// Auditoria e Logs (Apenas Admin)
 app.get('/api/logs', logController.getLogs);
 
+// Servir frontend se compilado
 const frontendDistPath = path.join(__dirname, '../frontend/dist');
 if (fs.existsSync(frontendDistPath)) {
   app.use(express.static(frontendDistPath));
@@ -63,7 +91,7 @@ if (fs.existsSync(frontendDistPath)) {
   });
 } else {
   app.get('*', (req, res) => {
-    res.json({ message: 'API Cine Mágico funcionando. O frontend está em outro container.' });
+    res.json({ message: 'API Conta Comigo funcionando. O frontend está em outro container.' });
   });
 }
 
@@ -73,7 +101,7 @@ async function startServer() {
   try {
     await db.initDatabase();
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Servidor Cine Mágico rodando na porta ${PORT}`);
+      console.log(`✓ Servidor Conta Comigo rodando na porta ${PORT}`);
     });
   } catch (error) {
     console.error('Erro ao conectar com o banco de dados:', error.message);

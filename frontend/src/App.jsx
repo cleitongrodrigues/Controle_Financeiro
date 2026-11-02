@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
+import LandingPage from './components/LandingPage';
 import Auth from './components/Auth';
-import Catalog from './components/Catalog';
-import ResetPassword from './components/ResetPassword';
+import Dashboard from './components/Dashboard';
+import AuditLogs from './components/AuditLogs';
 import Profile from './components/Profile';
+import ResetPassword from './components/ResetPassword';
 
 function ResetPasswordRoute() {
   const [searchParams] = useSearchParams();
@@ -45,19 +47,41 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
+          {/* Rota de redefinição de senha */}
           <Route path="/reset" element={<ResetPasswordRoute />} />
+
+          {/* Rota pública de login */}
           <Route
             path="/login"
             element={!token ? <Auth onLogin={login} /> : <Navigate to="/" replace />}
           />
+
+          {/* Rota raiz: se logado, mostra Dashboard; se deslogado, mostra a Landing Page pública */}
           <Route
             path="/"
-            element={token ? <Catalog user={user} onLogout={logout} token={token} /> : <Navigate to="/login" replace />}
+            element={
+              token ? (
+                <Dashboard user={user} token={token} onLogout={logout} />
+              ) : (
+                <LandingPage />
+              )
+            }
           />
+
+          {/* Perfil do usuário */}
           <Route
             path="/profile"
             element={token ? <Profile user={user} token={token} /> : <Navigate to="/login" replace />}
           />
+
+          {/* Logs de auditoria (Redis Streams) */}
+          <Route
+            path="/logs"
+            element={token ? <AuditLogs user={user} token={token} /> : <Navigate to="/login" replace />}
+          />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </Router>

@@ -1,9 +1,8 @@
 .profile-container {
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 2rem;
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
+  padding: 2rem 1.5rem;
+  color: var(--text-main);
 }
 
 .profile-header {
@@ -14,174 +13,159 @@
 }
 
 .back-button {
-  background: transparent;
-  color: var(--primary);
-  border: 1px solid var(--primary);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border: 1px solid var(--border);
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .back-button:hover {
-  background: var(--primary);
-  color: var(--bg);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .profile-header h2 {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 2.2rem;
-  font-weight: 600;
-  color: var(--primary);
+  font-size: 1.8rem;
+  font-weight: 800;
 }
 
 .profile-content {
-  display: flex;
-  gap: 40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
   align-items: flex-start;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 850px) {
   .profile-content {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 }
 
 .profile-card {
-  flex: 1;
-  background: var(--panel);
-  padding: 2.5rem;
-  border-radius: 12px;
+  background: var(--bg-card);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  box-shadow: 0 8px 24px var(--shadow);
+  box-shadow: var(--shadow-lg);
   backdrop-filter: blur(12px);
 }
 
 .avatar-section {
   display: flex;
-  justify-content: center;
-  margin-bottom: 2rem;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.avatar-preview {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--primary);
+  margin-bottom: 0.8rem;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
 }
 
 .avatar-preview img {
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border: 4px solid var(--primary);
-  box-shadow: 0 4px 15px rgba(247, 178, 103, 0.2);
 }
 
 .avatar-placeholder {
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: var(--bg);
+  width: 100%;
+  height: 100%;
+  background: var(--primary-gradient);
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 4.5rem;
-  font-weight: bold;
-  box-shadow: 0 4px 15px rgba(247, 178, 103, 0.2);
 }
 
-.profile-form .form-group {
-  margin-bottom: 1.5rem;
+.role-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.role-badge.admin { background: rgba(245, 158, 11, 0.2); color: #FBBF24; }
+.role-badge.titular { background: rgba(99, 102, 241, 0.2); color: #A5B4FC; }
+.role-badge.membro { background: rgba(16, 185, 129, 0.2); color: #6EE7B7; }
+
+.profile-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.profile-form label {
-  font-weight: 500;
-  color: var(--muted);
-  font-size: 0.95rem;
-}
-
-.profile-form input[type="text"],
-.profile-form textarea {
-  width: 100%;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.2);
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-}
-
-.profile-form input[type="file"] {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 10px;
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  color: var(--muted);
-}
-
-.profile-form input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  gap: 1.2rem;
 }
 
 .save-button {
-  width: 100%;
-  padding: 14px;
-  margin-top: 10px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
-  color: var(--bg);
+  background: var(--primary-gradient);
+  color: #fff;
   border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 1rem;
+  padding: 0.8rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 12px rgba(247, 178, 103, 0.3);
+  margin-top: 0.5rem;
 }
 
-.save-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(247, 178, 103, 0.4);
+.help-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
-.save-button:disabled {
-  opacity: 0.6;
-  transform: none;
-}
-
-.favorites-list {
-  flex: 1;
-  background: var(--panel);
-  padding: 2.5rem;
-  border-radius: 12px;
+.profile-accounts-section {
+  background: var(--bg-card);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  box-shadow: 0 8px 24px var(--shadow);
-  backdrop-filter: blur(12px);
 }
 
-.favorites-list h3 {
-  font-family: 'Cormorant Garamond', serif;
-  color: var(--primary);
-  font-size: 1.8rem;
-  margin-bottom: 1.5rem;
+.profile-accounts-section h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 1.2rem;
 }
 
-.movies-grid {
+.accounts-grid {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 0.8rem;
 }
 
-.fav-card {
-  background: var(--panel-alt);
-  padding: 15px;
-  border-radius: 8px;
-  border-left: 4px solid var(--primary);
-  color: var(--muted);
-  font-size: 0.95rem;
+.account-card-mini {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
 }
 
-.no-favorites {
-  color: var(--muted);
-  font-style: italic;
+.acc-mini-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.badge-mini {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.badge-mini.conjunta { background: rgba(99, 102, 241, 0.2); color: #A5B4FC; }
+.badge-mini.pessoal { background: rgba(16, 185, 129, 0.2); color: #6EE7B7; }
+
+.acc-mini-role, .acc-mini-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
