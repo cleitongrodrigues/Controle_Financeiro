@@ -76,18 +76,7 @@ class StorageService {
 
   async getFileUrl(fileName) {
     if (!fileName) return null;
-
-    try {
-      const command = new GetObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: fileName,
-      });
-
-      return await getSignedUrl(s3PresignClient, command, { expiresIn: 7200 }); // 2 horas
-    } catch (error) {
-      console.error('Erro ao gerar URL presign MinIO:', error.message);
-      return null;
-    }
+    return `/api/comprovantes/download?key=${encodeURIComponent(fileName)}`;
   }
 
   async getFileStream(fileName) {
