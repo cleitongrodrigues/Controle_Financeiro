@@ -29,7 +29,7 @@ export default function LandingPage() {
             O controle financeiro que une o <span className="gradient-text">pessoal</span> e o <span className="gradient-text-alt">familiar</span>
           </h1>
           <p className="hero-description">
-            Organize suas contas individuais ou compartilhe o orçamento da casa com quem você divide a rotina. Gere links de convite para afiliados, anexe comprovantes na nuvem e veja o balanço automático de quem pagou o quê.
+            Organize suas contas individuais ou compartilhe o orçamento da casa com quem você divide a rotina. Convide seu parceiro ou família por link, anexe fotos de comprovantes e veja o balanço automático de quem pagou o quê.
           </p>
           <div className="hero-cta-group">
             <Link to="/login?mode=register" className="btn-cta">
@@ -113,18 +113,18 @@ export default function LandingPage() {
             </div>
             <div className="solution-item">
               <span className="sol-icon">🔗</span>
-              <h4>Convite Instantâneo para Afiliados</h4>
-              <p>O titular gera o código de convite e envia pelo WhatsApp. O parceiro entra na conta com login próprio em 1 clique.</p>
+              <h4>Convite Fácil para a Família</h4>
+              <p>Gere um código de convite e envie pelo WhatsApp. Seu parceiro ou parente entra na conta compartilhada em segundos com login próprio.</p>
             </div>
             <div className="solution-item">
-              <span className="sol-icon">☁️</span>
-              <h4>Anexo de Comprovantes na Nuvem</h4>
-              <p>Tirou foto do comprovante PIX ou cupom fiscal? Anexe direto na transação e guarde com segurança no Object Storage (MinIO).</p>
+              <span className="sol-icon">🧾</span>
+              <h4>Comprovantes e Recibos Salvos</h4>
+              <p>Tirou foto do comprovante PIX ou cupom do supermercado? Anexe direto na despesa para nunca mais perder um comprovante no WhatsApp.</p>
             </div>
             <div className="solution-item">
               <span className="sol-icon">🛡️</span>
-              <h4>Permissões RBAC e Auditoria</h4>
-              <p>Titular gerencia regras, membros lançam gastos e tudo fica registrado em tempo real com auditoria Redis Streams.</p>
+              <h4>Total Transparência e Segurança</h4>
+              <p>Você decide quem gerencia as contas e quem lança despesas. Todo gasto registrado fica organizado para manter as finanças 100% claras.</p>
             </div>
           </div>
         </div>
@@ -149,7 +149,7 @@ export default function LandingPage() {
                 <li>✅ Controle pessoal individual completo</li>
                 <li>✅ Até 1 membro convidado (dupla/casal)</li>
                 <li>✅ Histórico dos últimos 3 meses</li>
-                <li>✅ Até 15 comprovantes anexados no MinIO</li>
+                <li>✅ Até 15 comprovantes e recibos anexados por mês</li>
                 <li>✅ Categorias essenciais de despesas e receitas</li>
               </ul>
               <Link to="/login?mode=register" className="btn-plan btn-plan-free">Criar Conta Gratuita</Link>
@@ -165,10 +165,10 @@ export default function LandingPage() {
               <ul className="plan-features">
                 <li>⭐ <strong>Membros ilimitados</strong> via link de convite</li>
                 <li>⭐ Múltiplas contas conjuntas e carteiras</li>
-                <li>⭐ <strong>Upload ilimitado de comprovantes</strong> no MinIO</li>
+                <li>⭐ <strong>Upload ilimitado de comprovantes</strong> e cupons fiscais</li>
                 <li>⭐ Histórico completo e sem limites</li>
                 <li>⭐ Relatório automático de "Quem gastou o quê"</li>
-                <li>⭐ Auditoria avançada de transações</li>
+                <li>⭐ Notificações e acompanhamento detalhado de gastos</li>
               </ul>
               <Link to="/login?mode=register" className="btn-plan btn-plan-pro">Assinar Pro com Stripe</Link>
             </div>
