@@ -25,9 +25,9 @@ module.exports = {
       );
 
       // Se o usuário ainda não tiver nenhuma conta, cria uma conta pessoal padrão automaticamente
-      if (accounts.length === 0) {
+      if (!accounts || accounts.length === 0) {
         const inviteCode = generateInviteCode('Pessoal');
-        const [result] = await db.query(
+        const result = await db.query(
           'INSERT INTO contas (nome, tipo, saldo, criador_id, codigo_convite) VALUES (?, ?, ?, ?, ?)',
           ['Minhas Finanças (Pessoal)', 'pessoal', 0.00, usuario_id, inviteCode]
         );
@@ -55,7 +55,7 @@ module.exports = {
         }];
       }
 
-      res.json(accounts);
+      res.json(Array.isArray(accounts) ? accounts : []);
     } catch (error) {
       console.error('Erro ao listar contas:', error);
       res.status(500).json({ error: 'Erro ao listar contas financeiras' });
@@ -75,7 +75,7 @@ module.exports = {
       const tipoConta = tipo === 'conjunta' ? 'conjunta' : 'pessoal';
       const inviteCode = generateInviteCode(nome);
 
-      const [result] = await db.query(
+      const result = await db.query(
         'INSERT INTO contas (nome, tipo, saldo, criador_id, codigo_convite) VALUES (?, ?, ?, ?, ?)',
         [nome.trim(), tipoConta, 0.00, usuario_id, inviteCode]
       );
@@ -113,13 +113,12 @@ module.exports = {
       const { id } = req.params;
 
       // Isolamento: verificar se o usuário é membro da conta solicitada ou admin
-      const [memberships] = await db.query(
+      const memberships = await db.query(
         'SELECT papel FROM membros_conta WHERE conta_id = ? AND usuario_id = ?',
         [id, usuario_id]
       );
 
-      if (memberships.length === 0 && req.user.role !== 'admin') {
-        // Tentativa de acessar conta de outro usuário!
+      if ((!memberships || memberships.length === 0) && req.user.role !== 'admin') {
         logServiceClient.sendLog(usuario_id, 'acesso_negado_conta', {
           conta_solicitada_id: id,
           motivo: 'Usuário não pertence a esta conta'
@@ -127,19 +126,19 @@ module.exports = {
         return res.status(403).json({ error: 'Acesso negado: você não tem permissão para acessar esta conta' });
       }
 
-      const [accounts] = await db.query(
+      const accounts = await db.query(
         'SELECT id, nome, tipo, saldo, codigo_convite, criador_id, criado_em FROM contas WHERE id = ?',
         [id]
       );
 
-      if (accounts.length === 0) {
+      if (!accounts || accounts.length === 0) {
         return res.status(404).json({ error: 'Conta não encontrada' });
       }
 
       const conta = accounts[0];
 
       // Buscar membros da conta
-      const [membros] = await db.query(
+      const membros = await db.query(
         `SELECT u.id, u.nome, u.email, u.foto_perfil, mc.papel, mc.criado_em as membro_desde
          FROM membros_conta mc
          JOIN usuarios u ON mc.usuario_id = u.id
@@ -148,7 +147,7 @@ module.exports = {
       );
 
       // Calcular receitas e despesas totais da conta
-      const [stats] = await db.query(
+      const stats = await db.query(
         `SELECT 
            COALESCE(SUM(CASE WHEN tipo = 'receita' THEN valor ELSE 0 END), 0) as total_receitas,
            COALESCE(SUM(CASE WHEN tipo = 'despesa' THEN valor ELSE 0 END), 0) as total_despesas
@@ -156,11 +155,11 @@ module.exports = {
         [id]
       );
 
-      conta.membros = membros;
-      conta.total_receitas = Number(stats[0].total_receitas);
-      conta.total_despesas = Number(stats[0].total_despesas);
+      conta.membros = Array.isArray(membros) ? membros : [];
+      conta.total_receitas = stats && stats.length > 0 ? Number(stats[0].total_receitas) : 0;
+      conta.total_despesas = stats && stats.length > 0 ? Number(stats[0].total_despesas) : 0;
       conta.saldo_calculado = conta.total_receitas - conta.total_despesas;
-      conta.meu_papel = memberships.length > 0 ? memberships[0].papel : 'admin';
+      conta.meu_papel = memberships && memberships.length > 0 ? memberships[0].papel : 'admin';
 
       res.json(conta);
     } catch (error) {
@@ -179,24 +178,24 @@ module.exports = {
         return res.status(400).json({ error: 'Código de convite é obrigatório' });
       }
 
-      const [accounts] = await db.query(
+      const accounts = await db.query(
         'SELECT id, nome, tipo FROM contas WHERE codigo_convite = ?',
         [codigo_convite.trim().toUpperCase()]
       );
 
-      if (accounts.length === 0) {
+      if (!accounts || accounts.length === 0) {
         return res.status(404).json({ error: 'Código de convite inválido ou expirado' });
       }
 
       const conta = accounts[0];
 
       // Verificar se já é membro
-      const [exists] = await db.query(
+      const exists = await db.query(
         'SELECT id FROM membros_conta WHERE conta_id = ? AND usuario_id = ?',
         [conta.id, usuario_id]
       );
 
-      if (exists.length > 0) {
+      if (exists && exists.length > 0) {
         return res.status(400).json({ error: 'Você já faz parte desta conta' });
       }
 
@@ -225,16 +224,16 @@ module.exports = {
       const usuario_id = req.user.id;
       const { id } = req.params;
 
-      const [memberships] = await db.query(
+      const memberships = await db.query(
         'SELECT papel FROM membros_conta WHERE conta_id = ? AND usuario_id = ?',
         [id, usuario_id]
       );
 
-      if (memberships.length === 0 && req.user.role !== 'admin') {
+      if ((!memberships || memberships.length === 0) && req.user.role !== 'admin') {
         return res.status(404).json({ error: 'Conta não encontrada' });
       }
 
-      const papel = memberships.length > 0 ? memberships[0].papel : req.user.role;
+      const papel = memberships && memberships.length > 0 ? memberships[0].papel : req.user.role;
 
       // Verificação RBAC: membros não podem excluir conta
       if (papel !== 'titular' && req.user.role !== 'admin') {

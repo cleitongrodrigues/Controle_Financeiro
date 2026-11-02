@@ -6,12 +6,12 @@ const logServiceClient = require('../services/logServiceClient');
 async function checkUserAccountAccess(userId, userRole, contaId) {
   if (userRole === 'admin') return { allowed: true, papel: 'admin' };
 
-  const [members] = await db.query(
+  const members = await db.query(
     'SELECT papel FROM membros_conta WHERE conta_id = ? AND usuario_id = ?',
     [contaId, userId]
   );
 
-  if (members.length === 0) return { allowed: false, papel: null };
+  if (!members || members.length === 0) return { allowed: false, papel: null };
   return { allowed: true, papel: members[0].papel };
 }
 
@@ -25,11 +25,11 @@ module.exports = {
       // Se conta_id não for informada, buscar a primeira conta do usuário
       let targetContaId = conta_id;
       if (!targetContaId) {
-        const [userAccounts] = await db.query(
+        const userAccounts = await db.query(
           'SELECT conta_id FROM membros_conta WHERE usuario_id = ? ORDER BY criado_em ASC LIMIT 1',
           [usuario_id]
         );
-        if (userAccounts.length === 0) {
+        if (!userAccounts || userAccounts.length === 0) {
           return res.json([]);
         }
         targetContaId = userAccounts[0].conta_id;
@@ -74,16 +74,17 @@ module.exports = {
 
       sql += ' ORDER BY t.data_transacao DESC, t.id DESC';
 
-      const [transactions] = await db.query(sql, params);
+      const transactions = await db.query(sql, params);
+      const txList = Array.isArray(transactions) ? transactions : [];
 
       // Gerar URLs seguras para os comprovantes
-      for (const t of transactions) {
+      for (const t of txList) {
         if (t.comprovante_url) {
           t.comprovante_download_url = await storageService.getFileUrl(t.comprovante_url);
         }
       }
 
-      res.json(transactions);
+      res.json(txList);
     } catch (error) {
       console.error('Erro ao listar transações:', error);
       res.status(500).json({ error: 'Erro ao listar transações' });
@@ -96,7 +97,7 @@ module.exports = {
       const usuario_id = req.user.id;
       const { id } = req.params;
 
-      const [transactions] = await db.query(
+      const transactions = await db.query(
         `SELECT t.*, u.nome as autor_nome, u.email as autor_email,
                 c.nome as categoria_nome, c.icone as categoria_icone, c.cor as categoria_cor,
                 cta.nome as conta_nome
@@ -108,7 +109,7 @@ module.exports = {
         [id]
       );
 
-      if (transactions.length === 0) {
+      if (!transactions || transactions.length === 0) {
         return res.status(404).json({ error: 'Transação não encontrada' });
       }
 
@@ -175,7 +176,7 @@ module.exports = {
       const catId = categoria_id ? Number(categoria_id) : null;
       const statusTx = status === 'pendente' ? 'pendente' : 'pago';
 
-      const [result] = await db.query(
+      const result = await db.query(
         `INSERT INTO transacoes 
          (conta_id, usuario_id, categoria_id, tipo, titulo, valor, data_transacao, descricao, comprovante_url, comprovante_nome, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -226,8 +227,8 @@ module.exports = {
       const { id } = req.params;
       const { categoria_id, tipo, titulo, valor, data_transacao, descricao, status } = req.body;
 
-      const [transactions] = await db.query('SELECT * FROM transacoes WHERE id = ?', [id]);
-      if (transactions.length === 0) {
+      const transactions = await db.query('SELECT * FROM transacoes WHERE id = ?', [id]);
+      if (!transactions || transactions.length === 0) {
         return res.status(404).json({ error: 'Transação não encontrada' });
       }
 
@@ -287,8 +288,8 @@ module.exports = {
       const usuario_id = req.user.id;
       const { id } = req.params;
 
-      const [transactions] = await db.query('SELECT * FROM transacoes WHERE id = ?', [id]);
-      if (transactions.length === 0) {
+      const transactions = await db.query('SELECT * FROM transacoes WHERE id = ?', [id]);
+      if (!transactions || transactions.length === 0) {
         return res.status(404).json({ error: 'Transação não encontrada' });
       }
 

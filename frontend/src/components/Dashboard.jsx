@@ -65,7 +65,7 @@ export default function Dashboard({ user, token, onLogout }) {
       });
       if (catRes.ok) {
         const catData = await catRes.json();
-        setCategories(catData);
+        setCategories(Array.isArray(catData) ? catData : []);
       }
 
       // 2. Buscar Contas do Usuário
@@ -74,10 +74,11 @@ export default function Dashboard({ user, token, onLogout }) {
       });
       if (!accRes.ok) throw new Error('Erro ao buscar contas');
       const accData = await accRes.json();
-      setAccounts(accData);
+      const validAccounts = Array.isArray(accData) ? accData : [];
+      setAccounts(validAccounts);
 
-      if (accData.length > 0) {
-        setSelectedAccountId(accData[0].id);
+      if (validAccounts.length > 0) {
+        setSelectedAccountId(validAccounts[0].id);
       }
     } catch (err) {
       console.error(err);
@@ -95,7 +96,9 @@ export default function Dashboard({ user, token, onLogout }) {
       });
       if (detailsRes.ok) {
         const d = await detailsRes.json();
-        setAccountDetails(d);
+        if (d && !d.error) {
+          setAccountDetails(d);
+        }
       }
 
       // 2. Lista de transações da conta
@@ -104,7 +107,7 @@ export default function Dashboard({ user, token, onLogout }) {
       });
       if (txRes.ok) {
         const txData = await txRes.json();
-        setTransactions(txData);
+        setTransactions(Array.isArray(txData) ? txData : []);
       }
     } catch (err) {
       console.error(err);
@@ -294,7 +297,7 @@ export default function Dashboard({ user, token, onLogout }) {
                 value={selectedAccountId || ''}
                 onChange={(e) => setSelectedAccountId(Number(e.target.value))}
               >
-                {accounts.map((acc) => (
+                {Array.isArray(accounts) && accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.nome} ({acc.papel.toUpperCase()})
                   </option>
@@ -384,7 +387,7 @@ export default function Dashboard({ user, token, onLogout }) {
               <span className="icon">👥</span>
             </div>
             <div className="metric-members-list">
-              {accountDetails?.membros?.map((m) => (
+              {Array.isArray(accountDetails?.membros) && accountDetails.membros.map((m) => (
                 <span key={m.id} className="member-pill" title={`${m.nome} (${m.papel})`}>
                   {m.nome.split(' ')[0]} ({m.papel})
                 </span>

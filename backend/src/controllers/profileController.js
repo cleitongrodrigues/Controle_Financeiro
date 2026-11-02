@@ -6,12 +6,12 @@ exports.getProfile = async (req, res) => {
   try {
     const { id } = req.user;
 
-    const [usuarios] = await db.query(
+    const usuarios = await db.query(
       'SELECT id, nome, email, role, bio, foto_perfil, criado_em FROM usuarios WHERE id = ?', 
       [id]
     );
     
-    if (usuarios.length === 0) {
+    if (!usuarios || usuarios.length === 0) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
 
@@ -23,7 +23,7 @@ exports.getProfile = async (req, res) => {
     }
 
     // Buscar contas das quais o usuário participa
-    const [contas] = await db.query(
+    const contas = await db.query(
       `SELECT c.id, c.nome, c.tipo, c.saldo, mc.papel, mc.criado_em as membro_desde
        FROM contas c
        JOIN membros_conta mc ON c.id = mc.conta_id
@@ -31,7 +31,7 @@ exports.getProfile = async (req, res) => {
        ORDER BY c.criado_em ASC`,
       [id]
     );
-    usuario.contas = contas;
+    usuario.contas = Array.isArray(contas) ? contas : [];
 
     return res.json(usuario);
   } catch (error) {
