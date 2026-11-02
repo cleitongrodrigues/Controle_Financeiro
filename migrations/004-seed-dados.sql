@@ -23,9 +23,9 @@ INSERT IGNORE INTO categorias (id, nome, tipo, icone, cor) VALUES
 -- 2. Usuários de Demonstração
 -- Hash bcrypt para '123456'
 INSERT INTO usuarios (nome, email, senha_hash, role, bio) VALUES
-('Administrador do Sistema', 'admin@contacomigo.com', '$2a$10$VX1fL594G9W.Sgs2ungJ6eaXcpe0aY17wt2PBzWGIMXF5y2xG3OAS', 'admin', 'Administrador geral da infraestrutura e auditoria.'),
-('Mariana Lopes (Titular)', 'titular@contacomigo.com', '$2a$10$VX1fL594G9W.Sgs2ungJ6eaXcpe0aY17wt2PBzWGIMXF5y2xG3OAS', 'titular', 'Gestora da conta familiar e orçamento da residência.'),
-('Lucas Lopes (Membro)', 'membro@contacomigo.com', '$2a$10$VX1fL594G9W.Sgs2ungJ6eaXcpe0aY17wt2PBzWGIMXF5y2xG3OAS', 'membro', 'Membro da família, compartilhando despesas da casa.')
+('Administrador do Sistema', 'admin@contacomigo.com', '$2a$10$5srQxzw5HMmeBxXOjP8qdOEpJM75O6tUDJMIAYmzKQkeiJPY5dCX6', 'admin', 'Administrador geral da infraestrutura e auditoria.'),
+('Mariana Lopes (Titular)', 'titular@contacomigo.com', '$2a$10$5srQxzw5HMmeBxXOjP8qdOEpJM75O6tUDJMIAYmzKQkeiJPY5dCX6', 'titular', 'Gestora da conta familiar e orçamento da residência.'),
+('Lucas Lopes (Membro)', 'membro@contacomigo.com', '$2a$10$5srQxzw5HMmeBxXOjP8qdOEpJM75O6tUDJMIAYmzKQkeiJPY5dCX6', 'membro', 'Membro da família, compartilhando despesas da casa.')
 ON DUPLICATE KEY UPDATE 
   nome=VALUES(nome), 
   senha_hash=VALUES(senha_hash), 

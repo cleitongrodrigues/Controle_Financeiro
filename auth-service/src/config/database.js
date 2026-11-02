@@ -85,7 +85,7 @@ async function initDatabase() {
 
     // 3. Inserir usuários padrão de teste caso não existam
     // Senha padrão para todos: 123456
-    const defaultPasswordHash = '$2a$10$VX1fL594G9W.Sgs2ungJ6eaXcpe0aY17wt2PBzWGIMXF5y2xG3OAS';
+    const defaultPasswordHash = '$2a$10$5srQxzw5HMmeBxXOjP8qdOEpJM75O6tUDJMIAYmzKQkeiJPY5dCX6';
     
     await connection.query(`
       INSERT INTO usuarios (id, nome, email, senha_hash, role, bio) VALUES
