@@ -173,10 +173,52 @@ O **Conta Comigo** opera sob modelo SaaS freemium via assinatura recorrente proc
 Os scripts de criação e semeadura do banco de dados estão versionados no repositório:
 - **Migração das Tabelas do Domínio:** [`migrations/003-dominio-conta-comigo.sql`](file:///c:/Users/Cleiton/Documents/GitHub/Controle_Financeiro/migrations/003-dominio-conta-comigo.sql)
 - **Seed de Dados Demonstrativos:** [`migrations/004-seed-dados.sql`](file:///c:/Users/Cleiton/Documents/GitHub/Controle_Financeiro/migrations/004-seed-dados.sql)
+- **Migração da Atividade 11 (Stripe & Assinaturas):** [`migrations/005-add-stripe-subscriptions.sql`](file:///c:/Users/Cleiton/Documents/GitHub/Controle_Financeiro/migrations/005-add-stripe-subscriptions.sql)
 
 ---
 
-## 11. Como Executar Localmente ou no Portainer
+## 11. Atividade 11 — SaaS Completo: Assinaturas Recorrentes com Stripe
+
+O **Conta Comigo** agora opera como um SaaS completo integrado ao **Stripe** em modo de teste:
+
+### 1. Planos e Preços
+- **Plano Free (R$ 0,00):** Limite de **5 lançamentos de transações por mês**.
+- **Plano Pro (R$ 19,90/mês):** Transações ilimitadas, comprovantes fiscais ilimitados no MinIO e múltiplos afiliados.
+
+### 2. Ciclo de Vida da Assinatura via Webhooks
+A assinatura é mantida em tempo real pelos **Webhooks do Stripe**, garantindo idempotência e tratamento contra eventos duplicados (tabela `stripe_events`):
+| Evento | Ação no Sistema | Efeito no Banco de Dados |
+| :--- | :--- | :--- |
+| `checkout.session.completed` | Cliente conclui checkout com cartão de teste | Promove usuário para `plano = 'pro'`, salva `stripe_customer_id` e `stripe_subscription_id`. |
+| `customer.subscription.updated` | Troca de plano, renovação ou status alterado | Atualiza status (`active`, `past_due`, `canceled`) e plano correspondente. |
+| `customer.subscription.deleted` | Cancelamento da assinatura | Rebaixa o usuário imediatamente para o `plano = 'free'`. |
+| `invoice.payment_failed` | Falha na renovação do cartão | Marca `past_due` e revoga privilégios Pro. |
+
+### 3. Portal do Cliente (Stripe Billing Portal)
+- O usuário Pro conta com o botão **"⭐ PRO (Gerenciar)"** no cabeçalho do Dashboard, abrindo a sessão do **Customer Portal** do Stripe para trocar de cartão, visualizar faturas ou cancelar a assinatura a qualquer momento.
+
+### 4. Validação de Limites na API (Backend)
+- A cada tentativa de criação de transação (`POST /api/transacoes`), o backend verifica o plano ativo e a quantidade de transações cadastradas no mês atual.
+- Ao atingir **5 transações no Free**, a API bloqueia a requisição retornando **HTTP 403 Forbidden** com detalhes e modal convidando para o upgrade.
+
+### 5. Painel Administrativo de Negócio (Admin)
+- Acessível na rota `/logs` exclusivamente pelo papel `admin` (`admin@contacomigo.com`):
+  - **Usuários Cadastrados por Plano:** Total e detalhamento Free vs Pro.
+  - **Assinaturas Ativas:** Quantidade de clientes pagantes ativos.
+  - **MRR de Teste (Monthly Recurring Revenue):** Cálculo em tempo real do faturamento mensal recorrente (`R$ 19,90 × Assinaturas Ativas`).
+  - **Trilha de Auditoria:** Eventos do Stripe e do negócio persistidos via **Redis Streams**.
+
+---
+
+## 12. Como Executar Localmente ou no Portainer
+
+### Configuração das Variáveis de Ambiente no Portainer:
+No painel do Portainer (Stack `filmes-do-cleitin`), defina as variáveis de ambiente:
+```env
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_ID_PRO=price_...
+```
 
 ### Execução Local com Docker Compose:
 ```bash
@@ -194,5 +236,4 @@ docker compose up -d --build
 Os serviços ficarão disponíveis em:
 - **Frontend Web:** `http://localhost:8201`
 - **Backend API:** `http://localhost:3000`
-- **MinIO Console:** `http://localhost:9001` (user: `minioadmin`, pass: `minioadmin123`)
-- **MinIO S3 Endpoint:** `http://localhost:9000`
+- **MinIO S3 Endpoint:** `http://localhost:9000` (interno Docker)

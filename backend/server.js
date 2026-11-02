@@ -11,13 +11,21 @@ const transactionsController = require('./src/controllers/transactionsController
 const categoriesController = require('./src/controllers/categoriesController');
 const logController = require('./src/controllers/logController');
 const profileController = require('./src/controllers/profileController');
+const stripeController = require('./src/controllers/stripeController');
+const adminController = require('./src/controllers/adminController');
 const authMiddleware = require('./src/middlewares/auth');
 const storageService = require('./src/services/storageService');
 const multer = require('multer');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+
+// Captura rawBody para validação da assinatura criptográfica dos Webhooks do Stripe
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
 // Configuração do Multer (mantém arquivo em memória para upload no MinIO)
 // Permite imagens (PNG, JPG, WEBP) e documentos (PDF)
@@ -55,8 +63,19 @@ app.get('/api/comprovantes/download', async (req, res) => {
   }
 });
 
+// Webhook do Stripe (Público, recebe notificações automáticas do Stripe)
+app.post('/api/stripe/webhook', stripeController.handleWebhook);
+
 // Todas as rotas abaixo exigem autenticação via JWT
 app.use('/api/*', authMiddleware);
+
+// Assinaturas e Planos SaaS (Stripe)
+app.get('/api/stripe/status', stripeController.getStatus);
+app.post('/api/stripe/checkout-session', stripeController.createCheckoutSession);
+app.post('/api/stripe/portal-session', stripeController.createPortalSession);
+
+// Painel Administrativo de Métricas e Negócio (Apenas Admin)
+app.get('/api/admin/metrics', adminController.getMetrics);
 
 // Perfil do Usuário
 app.get('/api/profile', profileController.getProfile);

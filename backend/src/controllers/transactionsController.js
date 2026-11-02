@@ -158,6 +158,41 @@ module.exports = {
         return res.status(403).json({ error: 'Você não tem permissão para lançar nesta conta' });
       }
 
+      // Validação do Limite do Plano Free na API (Requisito 5 da Atividade 11)
+      const userRows = await db.query('SELECT plano, subscription_status FROM usuarios WHERE id = ?', [usuario_id]);
+      const userPlan = userRows?.[0]?.plano || 'free';
+      const isPro = userPlan === 'pro' && userRows?.[0]?.subscription_status === 'active';
+
+      if (!isPro) {
+        const countResult = await db.query(
+          `SELECT COUNT(*) as total 
+           FROM transacoes 
+           WHERE usuario_id = ? 
+             AND MONTH(criado_em) = MONTH(CURRENT_DATE()) 
+             AND YEAR(criado_em) = YEAR(CURRENT_DATE())`,
+          [usuario_id]
+        );
+        const totalMes = countResult?.[0]?.total || 0;
+        const LIMITE_FREE_MES = 5;
+
+        if (totalMes >= LIMITE_FREE_MES) {
+          logServiceClient.sendLog(usuario_id, 'tentativa_transacao_limite_free_atingido', {
+            conta_id,
+            total_mes: totalMes,
+            limite: LIMITE_FREE_MES
+          });
+
+          return res.status(403).json({
+            error: `Limite do Plano Free atingido: você já utilizou ${totalMes} de ${LIMITE_FREE_MES} transações permitidas este mês. Faça upgrade para o Plano Pro para lançamentos e comprovantes ilimitados!`,
+            limite_atingido: true,
+            plano: 'free',
+            limite: LIMITE_FREE_MES,
+            uso_atual: totalMes,
+            upgrade_mensagem: 'Assine o Plano Pro por R$ 19,90/mês para liberar lançamentos ilimitados.'
+          });
+        }
+      }
+
       let comprovante_url = null;
       let comprovante_nome = null;
 

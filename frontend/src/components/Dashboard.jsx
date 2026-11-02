@@ -19,6 +19,12 @@ export default function Dashboard({ user, token, onLogout }) {
   const [showReceiptModal, setShowReceiptModal] = useState(null);
   const [inviteCodeInput, setInviteCodeInput] = useState('');
 
+  // Atividade 11: Assinatura Recorrente SaaS e Limites do Stripe
+  const [subStatus, setSubStatus] = useState(null);
+  const [loadingUpgrade, setLoadingUpgrade] = useState(false);
+  const [loadingPortal, setLoadingPortal] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(null);
+
   // Formulário de Transação
   const [txForm, setTxForm] = useState({
     titulo: '',
@@ -42,9 +48,21 @@ export default function Dashboard({ user, token, onLogout }) {
   const [filterType, setFilterType] = useState('todos');
   const [filterCategory, setFilterCategory] = useState('');
 
-  // Carregar contas e categorias
+  // Carregar contas, categorias e status do plano Stripe
   useEffect(() => {
     fetchInitialData();
+    fetchSubscriptionStatus();
+
+    // Tratar retorno do Stripe Checkout
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('upgrade') === 'success') {
+      setSuccessMsg('🎉 Assinatura do Plano Pro iniciada com sucesso! O webhook do Stripe ativará seu plano em instantes.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      fetchSubscriptionStatus();
+    } else if (params.get('upgrade') === 'canceled') {
+      setErrorMsg('Checkout cancelado. Você continua aproveitando o Plano Free.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, [token]);
 
   // Carregar transações sempre que a conta selecionada mudar
@@ -53,6 +71,64 @@ export default function Dashboard({ user, token, onLogout }) {
       fetchAccountData(selectedAccountId);
     }
   }, [selectedAccountId, token]);
+
+  const fetchSubscriptionStatus = async () => {
+    try {
+      const res = await fetch('/api/stripe/status', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSubStatus(data);
+      }
+    } catch (err) {
+      console.warn('Aviso ao carregar status da assinatura Stripe:', err);
+    }
+  };
+
+  const handleUpgradePro = async () => {
+    try {
+      setLoadingUpgrade(true);
+      const res = await fetch('/api/stripe/checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao iniciar checkout');
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      alert(`Stripe Checkout: ${err.message}`);
+    } finally {
+      setLoadingUpgrade(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      setLoadingPortal(true);
+      const res = await fetch('/api/stripe/portal-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao abrir Portal de Assinatura');
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      alert(`Portal do Cliente: ${err.message}`);
+    } finally {
+      setLoadingPortal(false);
+    }
+  };
 
   const fetchInitialData = async () => {
     try {
@@ -179,12 +255,18 @@ export default function Dashboard({ user, token, onLogout }) {
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.limite_atingido) {
+          setShowLimitModal(data);
+          setShowTransactionModal(false);
+          return;
+        }
         throw new Error(data.error || 'Erro ao salvar transação');
       }
 
       setSuccessMsg(editingTransaction ? 'Transação atualizada!' : 'Transação registrada com sucesso!');
       setShowTransactionModal(false);
       fetchAccountData(selectedAccountId);
+      fetchSubscriptionStatus();
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err) {
       alert(err.message);
@@ -328,9 +410,61 @@ export default function Dashboard({ user, token, onLogout }) {
               </Link>
             </div>
 
+            {/* Badge de Plano e Ações do Stripe (Atividade 11) */}
+            {subStatus?.is_pro ? (
+              <button
+                onClick={handleManageSubscription}
+                disabled={loadingPortal}
+                className="btn-sm"
+                style={{
+                  background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer'
+                }}
+                title="Assinatura Pro Ativa - Clique para gerenciar ou cancelar no Stripe"
+              >
+                ⭐ PRO {loadingPortal ? '(Abrindo...)' : '(Gerenciar)'}
+              </button>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span
+                  style={{
+                    fontSize: '0.8rem',
+                    background: 'rgba(148, 163, 184, 0.15)',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    color: '#94A3B8'
+                  }}
+                  title="Limite mensal de 5 transações gratuitas"
+                >
+                  FREE ({subStatus?.uso_mes?.transacoes || 0}/5 mês)
+                </span>
+                <button
+                  onClick={handleUpgradePro}
+                  disabled={loadingUpgrade}
+                  className="btn-sm"
+                  style={{
+                    background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                  title="Fazer upgrade para o Plano Pro no Stripe"
+                >
+                  {loadingUpgrade ? 'Abrindo Stripe...' : '⭐ Assinar Pro (R$ 19,90)'}
+                </button>
+              </div>
+            )}
+
             {user.role === 'admin' && (
               <Link to="/logs" className="btn-sm btn-admin">
-                🛡️ Auditoria (Logs)
+                🛡️ Painel Admin (MRR & Logs)
               </Link>
             )}
 
@@ -345,6 +479,38 @@ export default function Dashboard({ user, token, onLogout }) {
       <main className="dashboard-content">
         {errorMsg && <div className="alert alert-error">{errorMsg}</div>}
         {successMsg && <div className="alert alert-success">{successMsg}</div>}
+
+        {/* Alerta de Limite do Plano Free */}
+        {subStatus && !subStatus.is_pro && subStatus.uso_mes?.atingiu_limite && (
+          <div
+            className="alert alert-warning"
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'rgba(245, 158, 11, 0.15)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '16px'
+            }}
+          >
+            <div>
+              <strong>⚠️ Limite do Plano Free atingido!</strong>
+              <span style={{ marginLeft: '6px', color: '#CBD5E1' }}>
+                Você já utilizou suas 5 transações gratuitas deste mês. Novas transações serão bloqueadas na API.
+              </span>
+            </div>
+            <button
+              onClick={handleUpgradePro}
+              disabled={loadingUpgrade}
+              className="btn-sm btn-primary"
+              style={{ whiteSpace: 'nowrap', marginLeft: '12px' }}
+            >
+              ⭐ Assinar Plano Pro (R$ 19,90/mês)
+            </button>
+          </div>
+        )}
 
         {/* Resumo Financeiro da Conta */}
         <section className="metrics-banner">
@@ -800,6 +966,63 @@ export default function Dashboard({ user, token, onLogout }) {
                 >
                   ⬇️ Baixar Arquivo Original
                 </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Limite do Plano Free Atingido (Atividade 11) */}
+      {showLimitModal && (
+        <div className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: '480px', textAlign: 'center' }}>
+            <div className="modal-header" style={{ justifyContent: 'center' }}>
+              <span style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🚫</span>
+              <h3 style={{ margin: 0, color: '#EF4444' }}>Limite do Plano Free Atingido</h3>
+            </div>
+            <div className="modal-body" style={{ padding: '16px 8px' }}>
+              <p style={{ color: '#CBD5E1', fontSize: '0.95rem' }}>
+                {showLimitModal.error || 'Você atingiu o limite de 5 transações deste mês no Plano Gratuito.'}
+              </p>
+              <div
+                style={{
+                  background: 'rgba(99, 102, 241, 0.1)',
+                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  margin: '16px 0',
+                  textAlign: 'left'
+                }}
+              >
+                <h4 style={{ margin: '0 0 8px 0', color: '#A5B4FC' }}>✨ Vantagens do Plano Pro:</h4>
+                <ul style={{ margin: 0, paddingLeft: '20px', color: '#E2E8F0', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                  <li>Lançamentos e extrato <strong>100% ilimitados</strong></li>
+                  <li>Upload ilimitado de <strong>comprovantes no MinIO</strong></li>
+                  <li>Membros e afiliados convidados ilimitados</li>
+                  <li>Relatório de acerto de contas automático</li>
+                </ul>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '20px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowLimitModal(null)}
+                  className="btn-secondary"
+                >
+                  Fechar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpgradePro}
+                  disabled={loadingUpgrade}
+                  className="btn-primary"
+                  style={{
+                    background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {loadingUpgrade ? 'Conectando...' : '⭐ Assinar Pro (R$ 19,90/mês)'}
+                </button>
               </div>
             </div>
           </div>
