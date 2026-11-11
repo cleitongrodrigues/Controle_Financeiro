@@ -907,7 +907,7 @@ a {
   cursor: pointer;
 }
 
-.btn-edit-icon, .btn-delete-icon {
+.btn-view-icon, .btn-edit-icon, .btn-delete-icon {
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);

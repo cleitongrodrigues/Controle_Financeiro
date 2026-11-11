@@ -36,7 +36,7 @@ const stripeController = {
       );
 
       const transacoesMes = countResult[0]?.total || 0;
-      const limiteFree = 5;
+      const limiteFree = 3;
 
       res.json({
         plano: user.plano || 'free',

@@ -173,7 +173,7 @@ module.exports = {
           [usuario_id]
         );
         const totalMes = countResult?.[0]?.total || 0;
-        const LIMITE_FREE_MES = 5;
+        const LIMITE_FREE_MES = 3;
 
         if (totalMes >= LIMITE_FREE_MES) {
           logServiceClient.sendLog(usuario_id, 'tentativa_transacao_limite_free_atingido', {

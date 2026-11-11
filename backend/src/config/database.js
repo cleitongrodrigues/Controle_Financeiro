@@ -93,6 +93,33 @@ async function initDatabase() {
       console.log('✓ Categorias padrão inseridas no banco.');
     }
 
+    // 6. Tabela de Idempotência do Stripe e Colunas de Assinatura (Atividade 11)
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS stripe_events (
+        id VARCHAR(255) PRIMARY KEY,
+        tipo VARCHAR(100) NOT NULL,
+        processado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Garantir colunas de plano e Stripe na tabela usuarios
+    const [cols] = await connection.query(`
+      SELECT COLUMN_NAME FROM information_schema.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'plano'
+    `);
+    if (cols.length === 0) {
+      await connection.query(`
+        ALTER TABLE usuarios 
+          ADD COLUMN plano VARCHAR(20) NOT NULL DEFAULT 'free',
+          ADD COLUMN stripe_customer_id VARCHAR(255) DEFAULT NULL,
+          ADD COLUMN stripe_subscription_id VARCHAR(255) DEFAULT NULL,
+          ADD COLUMN subscription_status VARCHAR(50) DEFAULT NULL,
+          ADD COLUMN subscription_price_id VARCHAR(255) DEFAULT NULL,
+          ADD COLUMN subscription_current_period_end TIMESTAMP NULL DEFAULT NULL;
+      `);
+      console.log('✓ Colunas de assinatura Stripe adicionadas na tabela usuarios.');
+    }
+
     console.log('✓ Estruturas do domínio Conta Comigo prontas no MySQL.');
   } catch (error) {
     console.error('Erro ao inicializar estruturas no backend:', error.message);

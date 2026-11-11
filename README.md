@@ -182,7 +182,7 @@ Os scripts de criação e semeadura do banco de dados estão versionados no repo
 O **Conta Comigo** agora opera como um SaaS completo integrado ao **Stripe** em modo de teste:
 
 ### 1. Planos e Preços
-- **Plano Free (R$ 0,00):** Limite de **5 lançamentos de transações por mês**.
+- **Plano Free (R$ 0,00):** Limite de **3 lançamentos de transações por mês**.
 - **Plano Pro (R$ 19,90/mês):** Transações ilimitadas, comprovantes fiscais ilimitados no MinIO e múltiplos afiliados.
 
 ### 2. Ciclo de Vida da Assinatura via Webhooks
@@ -199,7 +199,7 @@ A assinatura é mantida em tempo real pelos **Webhooks do Stripe**, garantindo i
 
 ### 4. Validação de Limites na API (Backend)
 - A cada tentativa de criação de transação (`POST /api/transacoes`), o backend verifica o plano ativo e a quantidade de transações cadastradas no mês atual.
-- Ao atingir **5 transações no Free**, a API bloqueia a requisição retornando **HTTP 403 Forbidden** com detalhes e modal convidando para o upgrade.
+- Ao atingir **3 transações no Free**, a API bloqueia a requisição retornando **HTTP 403 Forbidden** com detalhes e modal convidando para o upgrade.
 
 ### 5. Painel Administrativo de Negócio (Admin)
 - Acessível na rota `/logs` exclusivamente pelo papel `admin` (`admin@contacomigo.com`):

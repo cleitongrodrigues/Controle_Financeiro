@@ -14,6 +14,7 @@ export default function Dashboard({ user, token, onLogout }) {
   // Modais
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
+  const [viewingTransaction, setViewingTransaction] = useState(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showNewAccountModal, setShowNewAccountModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(null);
@@ -295,6 +296,21 @@ export default function Dashboard({ user, token, onLogout }) {
     }
   };
 
+  const handleViewTransaction = async (txId) => {
+    try {
+      const res = await fetch(`/api/transacoes/${txId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao carregar detalhes');
+      }
+      setViewingTransaction(data);
+    } catch (err) {
+      alert(`Multi-tenancy / Bloqueio: ${err.message}`);
+    }
+  };
+
   const handleCreateAccount = async (e) => {
     e.preventDefault();
     if (!newAccountForm.nome.trim()) return;
@@ -440,9 +456,9 @@ export default function Dashboard({ user, token, onLogout }) {
                     borderRadius: '6px',
                     color: '#94A3B8'
                   }}
-                  title="Limite mensal de 5 transações gratuitas"
+                  title={`Limite mensal de ${subStatus?.uso_mes?.limite || 3} transações gratuitas`}
                 >
-                  FREE ({subStatus?.uso_mes?.transacoes || 0}/5 mês)
+                  FREE ({subStatus?.uso_mes?.transacoes || 0}/{subStatus?.uso_mes?.limite || 3} mês)
                 </span>
                 <button
                   onClick={handleUpgradePro}
@@ -498,7 +514,7 @@ export default function Dashboard({ user, token, onLogout }) {
             <div>
               <strong>⚠️ Limite do Plano Free atingido!</strong>
               <span style={{ marginLeft: '6px', color: '#CBD5E1' }}>
-                Você já utilizou suas 5 transações gratuitas deste mês. Novas transações serão bloqueadas na API.
+                Você já utilizou suas {subStatus?.uso_mes?.limite || 3} transações gratuitas deste mês. Novas transações serão bloqueadas na API.
               </span>
             </div>
             <button
@@ -672,6 +688,13 @@ export default function Dashboard({ user, token, onLogout }) {
                     </div>
 
                     <div className="tx-actions">
+                      <button
+                        onClick={() => handleViewTransaction(tx.id)}
+                        className="btn-view-icon"
+                        title="Ver detalhes da transação (GET /api/transacoes/:id)"
+                      >
+                        👁️
+                      </button>
                       {tx.comprovante_url && (
                         <button
                           onClick={() => setShowReceiptModal(tx)}
@@ -972,6 +995,63 @@ export default function Dashboard({ user, token, onLogout }) {
         </div>
       )}
 
+      {/* Modal de Detalhes da Transação (Requisito 4: Detalhar recurso principal) */}
+      {viewingTransaction && (
+        <div className="modal-backdrop" onClick={() => setViewingTransaction(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3>Detalhes da Transação #{viewingTransaction.id}</h3>
+              <button onClick={() => setViewingTransaction(null)} className="close-btn">
+                ✕
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: '16px 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <span className={`tx-status ${viewingTransaction.status}`} style={{ textTransform: 'uppercase', fontWeight: 600 }}>
+                  {viewingTransaction.status}
+                </span>
+                <span className={`tx-amount ${viewingTransaction.tipo === 'receita' ? 'text-green' : 'text-red'}`} style={{ fontSize: '1.4rem' }}>
+                  {viewingTransaction.tipo === 'receita' ? '+' : '-'} R$ {Number(viewingTransaction.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '8px', lineHeight: 1.8 }}>
+                <p style={{ margin: '4px 0' }}><strong>Título:</strong> {viewingTransaction.titulo}</p>
+                <p style={{ margin: '4px 0' }}><strong>Tipo:</strong> {viewingTransaction.tipo === 'receita' ? '💰 Receita / Entrada' : '🛒 Despesa / Saída'}</p>
+                <p style={{ margin: '4px 0' }}><strong>Conta:</strong> {viewingTransaction.conta_nome || 'Conta Atual'}</p>
+                <p style={{ margin: '4px 0' }}><strong>Categoria:</strong> {viewingTransaction.categoria_nome || 'Não categorizado'}</p>
+                <p style={{ margin: '4px 0' }}><strong>Data da Transação:</strong> {new Date(viewingTransaction.data_transacao).toLocaleDateString('pt-BR')}</p>
+                <p style={{ margin: '4px 0' }}><strong>Autor do Lançamento:</strong> {viewingTransaction.autor_nome} ({viewingTransaction.autor_email})</p>
+                {viewingTransaction.descricao && (
+                  <p style={{ margin: '4px 0' }}><strong>Observações:</strong> {viewingTransaction.descricao}</p>
+                )}
+                <p style={{ margin: '4px 0', fontSize: '0.85rem', color: '#94A3B8' }}><strong>Registrado em:</strong> {new Date(viewingTransaction.criado_em).toLocaleString('pt-BR')}</p>
+              </div>
+
+              {viewingTransaction.comprovante_url && (
+                <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                  <button
+                    onClick={() => {
+                      setShowReceiptModal(viewingTransaction);
+                      setViewingTransaction(null);
+                    }}
+                    className="btn-receipt"
+                    style={{ padding: '8px 16px', fontSize: '0.9rem' }}
+                  >
+                    📎 Ver Comprovante no MinIO ({viewingTransaction.comprovante_nome || 'Arquivo'})
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="modal-actions" style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button onClick={() => setViewingTransaction(null)} className="btn-secondary">
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Limite do Plano Free Atingido (Atividade 11) */}
       {showLimitModal && (
         <div className="modal-overlay">
@@ -982,7 +1062,7 @@ export default function Dashboard({ user, token, onLogout }) {
             </div>
             <div className="modal-body" style={{ padding: '16px 8px' }}>
               <p style={{ color: '#CBD5E1', fontSize: '0.95rem' }}>
-                {showLimitModal.error || 'Você atingiu o limite de 5 transações deste mês no Plano Gratuito.'}
+                {showLimitModal.error || 'Você atingiu o limite de transações deste mês no Plano Gratuito.'}
               </p>
               <div
                 style={{
