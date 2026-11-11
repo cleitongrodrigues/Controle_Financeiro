@@ -1,4 +1,4 @@
-# Conta Comigo
+﻿# Conta Comigo
 
 > O controle financeiro colaborativo para você organizar suas finanças pessoais ou gerenciar as contas da casa e da família sem atritos.
 
@@ -8,8 +8,11 @@
 
 - **URL do Sistema no ar:** [https://cleiton-souza-isw055.lapps.studio](https://cleiton-souza-isw055.lapps.studio)
 - **Repositório:** [github.com/cleitongrodrigues/Controle_Financeiro](https://github.com/cleitongrodrigues/Controle_Financeiro)
-- **Autor:** [@cleitongrodrigues](https://github.com/cleitongrodrigues)
+- **Autor:** [@cleitongrodrigues](https://github.com/cleitongrodrigues) (Cleiton Rodrigues de Souza)
 - **Professor / Disciplina:** [github.com/siriani](https://github.com/siriani) — *ISW055 · Introdução à Computação em Nuvem*
+- **Relatórios Oficiais de Avaliação:**
+  - 📄 **P1 (1º Bimestre):** [docs/P1_ISW055_Cleiton_Souza.pdf](docs/P1_ISW055_Cleiton_Souza.pdf)
+  - 📄 **P2 (2º Bimestre - Relatório Consolidado):** [docs/P2_ISW055_Cleiton_Souza.pdf](docs/P2_ISW055_Cleiton_Souza.pdf) (Fonte Typst: [P2_ISW055_Cleiton_Souza.typ](docs/P2_ISW055_Cleiton_Souza.typ))
 
 ---
 
@@ -213,7 +216,7 @@ A assinatura é mantida em tempo real pelos **Webhooks do Stripe**, garantindo i
 ## 12. Como Executar Localmente ou no Portainer
 
 ### Configuração das Variáveis de Ambiente no Portainer:
-No painel do Portainer (Stack `filmes-do-cleitin`), defina as variáveis de ambiente:
+No painel do Portainer (Stack `controle-financeiro-cleiton`), defina as variáveis de ambiente:
 ```env
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
